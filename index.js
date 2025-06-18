@@ -38,7 +38,7 @@ const ChatMessage = mongoose.model("ChatMessage", chatMessageSchema);
 // Middleware
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: "https://chatbot-adwance.netlify.app",
     credentials: true,
   })
 );
