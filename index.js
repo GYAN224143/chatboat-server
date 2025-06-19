@@ -1,19 +1,13 @@
-require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { v4: uuidv4 } = require("uuid");
+require("dotenv").config({ path: require("path").resolve(__dirname, ".env") });
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-
-// Debugging: Log environment variables
-console.log("Environment Variables:");
-console.log("PORT:", process.env.PORT);
-console.log("MONGODB_URI:", process.env.MONGODB_URI ? "exists" : "MISSING");
-console.log("JWT_SECRET:", process.env.JWT_SECRET ? "exists" : "MISSING");
 
 // MongoDB Connection
 const MONGODB_URI = process.env.MONGODB_URI;
