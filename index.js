@@ -197,18 +197,18 @@ const server = app.listen(PORT, "0.0.0.0", () => {
 });
 
 // WebSocket server
-const wss = new WebSocket.Server({ server });
+// const wss = new WebSocket.Server({ server });
 
-wss.on("connection", (ws) => {
-  console.log("New WebSocket connection");
+// wss.on("connection", (ws) => {
+//   console.log("New WebSocket connection");
 
-  ws.on("message", (message) => {
-    console.log(`Received: ${message}`);
-    // Broadcast to all clients
-    wss.clients.forEach((client) => {
-      if (client !== ws && client.readyState === WebSocket.OPEN) {
-        client.send(message.toString());
-      }
-    });
-  });
-});
+//   ws.on("message", (message) => {
+//     console.log(`Received: ${message}`);
+//     // Broadcast to all clients
+//     wss.clients.forEach((client) => {
+//       if (client !== ws && client.readyState === WebSocket.OPEN) {
+//         client.send(message.toString());
+//       }
+//     });
+//   });
+// });
