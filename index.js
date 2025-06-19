@@ -6,6 +6,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { v4: uuidv4 } = require("uuid");
 const WebSocket = require("ws");
+import("dotenv/config"); // Ensure dotenv is loaded
 
 const app = express();
 const PORT = process.env.PORT || 5000;
