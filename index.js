@@ -227,14 +227,6 @@ app.get("/api/chat/history", authenticateToken, async (req, res) => {
   }
 });
 
-// app.get("/env", (req, res) => {
-//   res.json({
-//     MONGODB_URI: process.env.MONGODB_URI ? "exists" : "missing",
-//     JWT_SECRET: process.env.JWT_SECRET ? "exists" : "missing",
-//     NODE_ENV: process.env.NODE_ENV || "development",
-//   });
-// });
-
 // Server Startup
 const server = app
   .listen(PORT, "0.0.0.0", () => {
@@ -244,22 +236,3 @@ const server = app
     console.error("Server startup error:", err);
     process.exit(1);
   });
-
-// Note: WebSocket code has been removed as it's not supported on Render's free tier
-
-// WebSocket server
-// const wss = new WebSocket.Server({ server });
-
-// wss.on("connection", (ws) => {
-//   console.log("New WebSocket connection");
-
-//   ws.on("message", (message) => {
-//     console.log(`Received: ${message}`);
-//     // Broadcast to all clients
-//     wss.clients.forEach((client) => {
-//       if (client !== ws && client.readyState === WebSocket.OPEN) {
-//         client.send(message.toString());
-//       }
-//     });
-//   });
-// });
