@@ -16,7 +16,7 @@ const MONGODB_URI =
   "mongodb+srv://gyan224143:tPKK3zGdjXgOGmAP@cluster0.ngzfouf.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 // MongoDB Connection
 mongoose
-  .connect(process.env.MONGODB_URI, {
+  .connect(MONGODB_URI, {
     serverSelectionTimeoutMS: 5000,
     socketTimeoutMS: 30000,
   })
