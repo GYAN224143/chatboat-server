@@ -5,25 +5,31 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { v4: uuidv4 } = require("uuid");
-const WebSocket = require("ws");
-import("dotenv/config"); // Ensure dotenv is loaded
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Debugging: Log environment variables
+console.log("Environment Variables:");
+console.log("PORT:", process.env.PORT);
+console.log("MONGODB_URI:", process.env.MONGODB_URI ? "exists" : "MISSING");
+console.log("JWT_SECRET:", process.env.JWT_SECRET ? "exists" : "MISSING");
 
 // MongoDB Connection
 const MONGODB_URI = process.env.MONGODB_URI;
 if (!MONGODB_URI) {
   console.error("ERROR: MONGODB_URI environment variable not set!");
-  process.exit(1); // Exit if no connection string
+  process.exit(1);
 }
+
+mongoose.set("strictQuery", true);
 
 mongoose
   .connect(MONGODB_URI)
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => {
     console.error("MongoDB connection error:", err);
-    process.exit(1); // Exit on connection failure
+    process.exit(1);
   });
 
 // MongoDB Schemas
@@ -48,19 +54,27 @@ const ChatMessage = mongoose.model("ChatMessage", chatMessageSchema);
 // Middleware
 app.use(
   cors({
-    origin: ["http://localhost:5173", "https://chatbot-adwance.netlify.app"],
+    origin: [
+      "http://localhost:5173",
+      "https://chatbot-adwance.netlify.app",
+      "https://your-production-frontend.netlify.app", // Add your production URL
+    ],
     credentials: true,
   })
 );
 app.use(express.json());
 
-// JWT Secret
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
+// JWT Configuration
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error("ERROR: JWT_SECRET environment variable not set!");
+  process.exit(1);
+}
 
-// Helper function to authenticate token
+// Authentication middleware
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1];
+  const token = authHeader?.split(" ")[1];
 
   if (!token) return res.sendStatus(401);
 
@@ -72,24 +86,39 @@ const authenticateToken = (req, res, next) => {
 };
 
 // Routes
+app.get("/", (req, res) => {
+  res.send("Server is running! Check /health for status");
+});
+
+app.get("/health", (req, res) => {
+  const dbStatus =
+    mongoose.connection.readyState === 1 ? "connected" : "disconnected";
+  res.json({
+    status: "OK",
+    database: dbStatus,
+    timestamp: new Date(),
+    environment: process.env.NODE_ENV || "development",
+  });
+});
+
+// Auth Routes
 app.post("/api/auth/register", async (req, res) => {
   try {
     const { username, password } = req.body;
+
     if (!username || !password) {
       return res
         .status(400)
         .json({ error: "Username and password are required" });
     }
 
-    const existingUser = await User.findOne({ username });
-    if (existingUser) {
+    if (await User.exists({ username })) {
       return res.status(400).json({ error: "Username already exists" });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
     const user = new User({
       username,
-      password: hashedPassword,
+      password: await bcrypt.hash(password, 10),
     });
 
     await user.save();
@@ -97,14 +126,16 @@ app.post("/api/auth/register", async (req, res) => {
     const token = jwt.sign(
       { userId: user._id, username: user.username },
       JWT_SECRET,
-      {
-        expiresIn: "1h",
-      }
+      { expiresIn: "1h" }
     );
 
-    res.status(201).json({ token, userId: user._id, username: user.username });
+    res.status(201).json({
+      token,
+      userId: user._id,
+      username: user.username,
+    });
   } catch (error) {
-    console.error(error);
+    console.error("Registration error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -112,6 +143,7 @@ app.post("/api/auth/register", async (req, res) => {
 app.post("/api/auth/login", async (req, res) => {
   try {
     const { username, password } = req.body;
+
     if (!username || !password) {
       return res
         .status(400)
@@ -119,12 +151,7 @@ app.post("/api/auth/login", async (req, res) => {
     }
 
     const user = await User.findOne({ username });
-    if (!user) {
-      return res.status(401).json({ error: "Invalid credentials" });
-    }
-
-    const passwordMatch = await bcrypt.compare(password, user.password);
-    if (!passwordMatch) {
+    if (!user || !(await bcrypt.compare(password, user.password))) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
@@ -134,29 +161,33 @@ app.post("/api/auth/login", async (req, res) => {
       { expiresIn: "1h" }
     );
 
-    res.json({ token, userId: user._id, username: user.username });
+    res.json({
+      token,
+      userId: user._id,
+      username: user.username,
+    });
   } catch (error) {
-    console.error(error);
+    console.error("Login error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
+// Chat Routes
 app.post("/api/chat", authenticateToken, async (req, res) => {
   try {
     const { message } = req.body;
     const userId = req.user.userId;
 
-    if (!message) {
+    if (!message?.trim()) {
       return res.status(400).json({ error: "Message is required" });
     }
 
     // Save user message
-    const userMessage = new ChatMessage({
+    await ChatMessage.create({
       userId,
-      message,
+      message: message.trim(),
       isUserMessage: true,
     });
-    await userMessage.save();
 
     // Simulate bot response
     const botResponses = [
@@ -170,39 +201,43 @@ app.post("/api/chat", authenticateToken, async (req, res) => {
       botResponses[Math.floor(Math.random() * botResponses.length)];
 
     // Save bot response
-    const botMessage = new ChatMessage({
+    await ChatMessage.create({
       userId,
       message: botResponse,
       isUserMessage: false,
     });
-    await botMessage.save();
 
     res.json({ response: botResponse });
   } catch (error) {
-    console.error(error);
+    console.error("Chat error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
 app.get("/api/chat/history", authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.userId;
-    const messages = await ChatMessage.find({ userId }).sort({ createdAt: 1 });
+    const messages = await ChatMessage.find({
+      userId: req.user.userId,
+    }).sort({ createdAt: 1 });
+
     res.json(messages);
   } catch (error) {
-    console.error(error);
+    console.error("History error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-app.get("/health", (req, res) => {
-  res.status(200).json({ status: "OK" });
-});
+// Server Startup
+const server = app
+  .listen(PORT, "0.0.0.0", () => {
+    console.log(`Server running on port ${PORT}`);
+  })
+  .on("error", (err) => {
+    console.error("Server startup error:", err);
+    process.exit(1);
+  });
 
-// Start the server
-const server = app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// Note: WebSocket code has been removed as it's not supported on Render's free tier
 
 // WebSocket server
 // const wss = new WebSocket.Server({ server });
