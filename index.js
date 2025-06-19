@@ -227,6 +227,14 @@ app.get("/api/chat/history", authenticateToken, async (req, res) => {
   }
 });
 
+// app.get("/env", (req, res) => {
+//   res.json({
+//     MONGODB_URI: process.env.MONGODB_URI ? "exists" : "missing",
+//     JWT_SECRET: process.env.JWT_SECRET ? "exists" : "missing",
+//     NODE_ENV: process.env.NODE_ENV || "development",
+//   });
+// });
+
 // Server Startup
 const server = app
   .listen(PORT, "0.0.0.0", () => {
