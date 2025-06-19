@@ -1,3 +1,4 @@
+require("dotenv").config(); // Must be first line
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
@@ -10,19 +11,14 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // MongoDB Connection
-const MONGODB_URI = process.env.MONGODB_URI;
-if (!MONGODB_URI) {
-  console.error("ERROR: MONGODB_URI environment variable not set!");
-  process.exit(1);
-}
-
-mongoose.set("strictQuery", true);
-
 mongoose
-  .connect(MONGODB_URI)
+  .connect(process.env.MONGODB_URI, {
+    serverSelectionTimeoutMS: 5000,
+    socketTimeoutMS: 30000,
+  })
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => {
-    console.error("MongoDB connection error:", err);
+    console.error("MongoDB connection failed:", err);
     process.exit(1);
   });
 
@@ -48,14 +44,11 @@ const ChatMessage = mongoose.model("ChatMessage", chatMessageSchema);
 // Middleware
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "https://chatbot-adwance.netlify.app",
-      "https://your-production-frontend.netlify.app", // Add your production URL
-    ],
+    origin: ["https://chatbot-adwance.netlify.app", "http://localhost:5173"],
     credentials: true,
   })
 );
+
 app.use(express.json());
 
 // JWT Configuration
@@ -81,17 +74,17 @@ const authenticateToken = (req, res, next) => {
 
 // Routes
 app.get("/", (req, res) => {
-  res.send("Server is running! Check /health for status");
+  res.send(
+    "Welcome to the Chatbot API! Use /api/auth/register to register or /api/auth/login to log in."
+  );
 });
-
 app.get("/health", (req, res) => {
-  const dbStatus =
-    mongoose.connection.readyState === 1 ? "connected" : "disconnected";
   res.json({
     status: "OK",
-    database: dbStatus,
-    timestamp: new Date(),
+    database:
+      mongoose.connection.readyState === 1 ? "connected" : "disconnected",
     environment: process.env.NODE_ENV || "development",
+    server: "Render",
   });
 });
 
@@ -224,9 +217,12 @@ app.get("/api/chat/history", authenticateToken, async (req, res) => {
 // Server Startup
 const server = app
   .listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Try these endpoints:
+  GET /health
+  POST /api/auth/register
+  POST /api/auth/login`);
   })
   .on("error", (err) => {
-    console.error("Server startup error:", err);
-    process.exit(1);
+    console.error("Server failed to start:", err);
   });
