@@ -10,6 +10,10 @@ require("dotenv").config({ path: require("path").resolve(__dirname, ".env") });
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+const JWT_SECRET =
+  "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2";
+const MONGODB_URI =
+  "mongodb+srv://gyan224143:tPKK3zGdjXgOGmAP@cluster0.ngzfouf.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 // MongoDB Connection
 mongoose
   .connect(process.env.MONGODB_URI, {
@@ -52,7 +56,7 @@ app.use(
 app.use(express.json());
 
 // JWT Configuration
-const JWT_SECRET = process.env.JWT_SECRET;
+
 if (!JWT_SECRET) {
   console.error("ERROR: JWT_SECRET environment variable not set!");
   process.exit(1);
