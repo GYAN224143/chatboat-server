@@ -11,13 +11,20 @@ import("dotenv/config"); // Ensure dotenv is loaded
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-mongoose.set("strictQuery", true); // <-- Add this line
-
 // MongoDB Connection
+const MONGODB_URI = process.env.MONGODB_URI;
+if (!MONGODB_URI) {
+  console.error("ERROR: MONGODB_URI environment variable not set!");
+  process.exit(1); // Exit if no connection string
+}
+
 mongoose
-  .connect(process.env.MONGODB_URI)
+  .connect(MONGODB_URI)
   .then(() => console.log("Connected to MongoDB"))
-  .catch((err) => console.error("MongoDB connection error:", err));
+  .catch((err) => {
+    console.error("MongoDB connection error:", err);
+    process.exit(1); // Exit on connection failure
+  });
 
 // MongoDB Schemas
 const userSchema = new mongoose.Schema({
